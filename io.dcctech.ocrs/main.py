@@ -4,6 +4,7 @@
 #  Any reproduction, modification, distribution, or other use of DCCTech's intellectual property without prior written
 #  consent is strictly prohibited.
 
+
 import logging
 import os
 import time
@@ -17,7 +18,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 
 # create file handler and set level to DEBUG
-fh = logging.FileHandler('ocrs.log')
+fh = logging.FileHandler('../ocrs.log')
 fh.setLevel(logging.DEBUG)
 
 # create formatter
