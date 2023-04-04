@@ -4,10 +4,34 @@
 #  Any reproduction, modification, distribution, or other use of DCCTech's intellectual property without prior written
 #  consent is strictly prohibited.
 
-import datetime
 import logging
 import os
 import time
+
+# create logger object
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to INFO
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create file handler and set level to DEBUG
+fh = logging.FileHandler('ocrs.log')
+fh.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to handlers
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+
+# add handlers to logger
+logger.addHandler(ch)
+logger.addHandler(fh)
+
+exit_file = "exit_file.txt"
 
 
 def clean_folder(folder_path, inactive_days=30):
@@ -18,25 +42,23 @@ def clean_folder(folder_path, inactive_days=30):
     current_time = time.time()
     inactive_time = current_time - (inactive_days * 24 * 60 * 60)
 
-    for root, dirs, files in os.walk(folder_path):
+    for root, dirs, files in os.walk(folder_path, topdown=True):
         for file in files:
-            path = os.path.join(root, file)
-            print(f"{path}")
-
-    for root, dirs, files in os.walk(folder_path):
-        for file in files:
+            if file == exit_file:
+                logger.info(f"{exit_file} file found! Shutting down program...")
+                exit()  # shuts down the program
             file = check(root, file, inactive_time)
             if file:
                 remove(file, False)
             else:
-                print(f"clean_file: {file}")
+                logger.warning(f"unknown file: {file}")
 
-        for dir in dirs:
-            folder = check(root, dir, inactive_time)
-            if dir:
+        for dic in dirs:
+            folder = check(root, dic, inactive_time)
+            if dic:
                 remove(folder)
             else:
-                print(f"clean_folder: {folder}")
+                logger.warning(f"Unknown dictionary: {folder}")
 
 
 def check(root, name, inactive_time):
@@ -45,65 +67,59 @@ def check(root, name, inactive_time):
     # Delete the file if it was last modified more than the specified number of days ago
     if last_modified_time < inactive_time:
         return path
-    else:
-        print(f"Remove: {path}")
 
 
 def remove(path, isDir=True):
     try:
-        if not os.path.exists(path):
-            log(f"The folder/file {path} doesn't exist.", logging.WARNING)
-        if isDir:
+        if path is None:
+            logger.warning("Path variable is None, cannot delete.")
+        elif not os.path.exists(path):
+            logger.warning(f"The folder/file {path} doesn't exist.")
+        elif isDir:
             os.rmdir(path)
-            log(f"Removed directory {path}")
+            logger.info(f"Removed directory {path}")
         else:
             os.remove(path)
-            log(f"Removed file {path}")
+            logger.info(f"Removed file {path}")
     except Exception as e:
-        log(f"Failed to delete {path}. Reason: {e}", logging.ERROR)
-
-
-def log(msg, level=logging.INFO):
-    logging.basicConfig(
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        handlers=[
-            logging.FileHandler('ocrs.log'),
-            logging.StreamHandler()
-        ]
-    )
-    if level is logging.ERROR:
-        logging.error(msg)
-    else:
-        logging.info(msg)
+        logger.error(f"Failed to delete {path}. Reason: {e}")
 
 
 def get_args(prompt):
     while True:
         try:
             value = input(prompt)
-            return value
+            if value:
+                return value
+            else:
+                raise ValueError
         except ValueError:
-            print("Invalid input. Please try again.")
+            logger.error("Invalid input. Please try again.")
 
 
 def main():
     folders = []
-    folder_list = get_args("Enter a comma-separated list of folders to be cleaned: ")
+    get_folders_cmd = "Enter a comma-separated list of folders to be cleaned: "
+    folder_list = get_args(get_folders_cmd)
+    logger.info(f"{get_folders_cmd}{folder_list}")
     folder_paths = folder_list.split(",")
     for folder_path in folder_paths:
         folder = folder_path.strip()
-        days = int(
-            get_args(f"Enter the number of days of inactivity after which files should be deleted for {folder}: "))
+        get_number_of_days = f"Enter the number of days of inactivity after which files should be deleted for {folder}: "
+        days = int(get_args(get_number_of_days))
+        logger.info(f"{get_number_of_days}{days}")
         folders.append((folder, days))
 
-    sleep_time = int(get_args("Enter the number of seconds to sleep between cleaning operations: "))
+    get_sleep_time = "Enter the number of seconds to sleep between cleaning operations: "
+    sleep_time = int(get_args(get_sleep_time))
+    logger.info(f"{get_sleep_time}{sleep_time} seconds")
 
     while True:
         for folder, days in folders:
-            log(f"Clean {folder} folder by removing any sub-content that is older than {days} days.")
+            logger.debug(f"Clean {folder} folder by removing any sub-content that is older than {days} days.")
             clean_folder(folder, days)
-            log(f"All contents of {folder} have been removed.")
-        log("All specified folders have been cleaned.")
+            logger.debug(f"All contents of {folder} have been removed.")
+        logger.debug("All specified folders have been cleaned.")
         time.sleep(sleep_time)
 
 
