@@ -8,7 +8,7 @@ and folders (including sub-folders) that have not been modified within a specifi
 ### Install OCRS
 - Clone this repository to your local machine:
 ```sh
-https://github.com/timoterik/ocrs.git
+git clone https://github.com/timoterik/ocrs.git
 ```
 - Open a terminal and navigate to the project directory.
   - Run the main.py file to start the virtual assistant:
